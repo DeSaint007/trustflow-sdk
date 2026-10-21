@@ -212,7 +212,7 @@ describe('TokenRefreshManager', () => {
         expect(jest.getTimerCount()).toBe(1);
 
         // Advance into the actual refresh window; only one refresh may happen.
-        await jest.advanceTimersByTimeAsync(durationMs - 60_000 - 2 * 2_147_483_647);
+        await jest.advanceTimersByTimeAsync(durationMs - 60_000 - 2 * 2_147_483_647 + 2_000);
         expect(mockPostCallCount).toBe(1);
         expect(jest.getTimerCount()).toBe(1);
       } finally {
