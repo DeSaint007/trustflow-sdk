@@ -148,6 +148,18 @@ if (status.data.isReady) {
 - `.getProfile(address)` — fetch a user's profile (automatic retry on transient backend failures)
 - `.updateProfile(address, params)` — update a user's profile (automatic retry on transient backend failures)
 
+## WebAuthnManager
+
+Import `WebAuthnManager` and the `WebAuthnCredentialOptions`,
+`WebAuthnRegistrationOptions`, and `WebAuthnSignatureResponse` types from
+`@trustflow/sdk`.
+
+- `createRegistrationChallenge(options)` — returns credential creation options using the supplied user and relying party information.
+- `deriveSmartAccountKeypair(credential, userId)` — derives a deterministic Stellar keypair from the credential and user ID; requires Node.js crypto.
+- `verifySignature(credential, signature)` — checks that the response counter increased and returns a credential with the new counter. This method does not cryptographically verify the WebAuthn signature.
+
+Each method returns an `SDKResult`.
+
 ## IPFSStorage
 - `new IPFSStorage(config?)` — `config.apiUrl` (default: web3.storage-compatible upload API), `config.apiKey`, `config.gatewayUrl`
 - `.upload(file, options?)` — uploads a `Buffer`, `Uint8Array`, `ArrayBuffer`, `Blob` or browser `File` (a `File`'s `name` and a `Blob`'s `type` are used as the default `filename` / `contentType`); the request goes to `apiUrl` exactly as configured (no slash appended, query string kept); returns `SDKResult<{ cid, url }>`
