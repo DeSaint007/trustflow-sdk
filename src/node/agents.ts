@@ -30,7 +30,7 @@
 import { Agent as HttpAgent } from 'node:http';
 import { Agent as HttpsAgent } from 'node:https';
 import type { AxiosInstance } from 'axios';
-import { DEFAULT_POOL_CONFIG, type PoolConfig } from '../utils/connection-pool';
+import { DEFAULT_POOL_CONFIG, registerPoolAgent, destroyPoolAgent, type PoolConfig } from '../utils/connection-pool';
 
 export type {
   PoolConfig,
@@ -62,13 +62,15 @@ export {
 export function createHttpAgent(config?: PoolConfig): HttpAgent {
   const finalConfig = { ...DEFAULT_POOL_CONFIG, ...config };
 
-  return new HttpAgent({
+  const agent = new HttpAgent({
     keepAlive: true,
     maxSockets: finalConfig.maxSockets,
     maxFreeSockets: finalConfig.maxFreeSockets,
     timeout: finalConfig.socketTimeoutMs,
     keepAliveMsecs: finalConfig.keepAliveInitialDelayMs,
   });
+  registerPoolAgent(agent);
+  return agent;
 }
 
 /**
@@ -82,13 +84,15 @@ export function createHttpAgent(config?: PoolConfig): HttpAgent {
 export function createHttpsAgent(config?: PoolConfig): HttpsAgent {
   const finalConfig = { ...DEFAULT_POOL_CONFIG, ...config };
 
-  return new HttpsAgent({
+  const agent = new HttpsAgent({
     keepAlive: true,
     maxSockets: finalConfig.maxSockets,
     maxFreeSockets: finalConfig.maxFreeSockets,
     timeout: finalConfig.socketTimeoutMs,
     keepAliveMsecs: finalConfig.keepAliveInitialDelayMs,
   });
+  registerPoolAgent(agent);
+  return agent;
 }
 
 /**
@@ -98,7 +102,23 @@ export function createHttpsAgent(config?: PoolConfig): HttpsAgent {
  * @param instance - The axios instance to configure
  * @param config - Overrides for {@link DEFAULT_POOL_CONFIG}
  */
+// Tracks the pair installed by this helper without retaining axios instances.
+const configuredAgents = new WeakMap<
+  AxiosInstance,
+  { httpAgent: HttpAgent; httpsAgent: HttpsAgent }
+>();
+
 export function configureAxiosConnectionPool(instance: AxiosInstance, config?: PoolConfig): void {
-  instance.defaults.httpAgent = createHttpAgent(config);
-  instance.defaults.httpsAgent = createHttpsAgent(config);
+  const previous = configuredAgents.get(instance);
+  if (previous) {
+    // Reconfiguration must not leave the old pair registered indefinitely.
+    destroyPoolAgent(previous.httpAgent);
+    destroyPoolAgent(previous.httpsAgent);
+  }
+
+  const httpAgent = createHttpAgent(config);
+  const httpsAgent = createHttpsAgent(config);
+  instance.defaults.httpAgent = httpAgent;
+  instance.defaults.httpsAgent = httpsAgent;
+  configuredAgents.set(instance, { httpAgent, httpsAgent });
 }

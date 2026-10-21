@@ -130,7 +130,11 @@ export function getHttpAgentStats(agent: PooledAgent): PoolStats {
  *   {@link PooledAgent}
  */
 export function destroyPoolAgent(agent: PooledAgent): void {
-  agent.destroy();
+  try {
+    agent.destroy();
+  } finally {
+    unregisterPoolAgent(agent);
+  }
 }
 
 /**
