@@ -63,15 +63,15 @@ export const DEFAULT_POOL_CONFIG: Required<PoolConfig> = {
  */
 export interface PooledAgent {
   /** Live sockets, keyed by `host:port`. */
-  sockets?: Readonly<Record<string, unknown[]>>;
+  sockets?: Readonly<Record<string, unknown[] | undefined>>;
   /** Idle sockets, keyed by `host:port`. */
-  freeSockets?: Readonly<Record<string, unknown[]>>;
+  freeSockets?: Readonly<Record<string, unknown[] | undefined>>;
   /** Requests queued per host. */
-  requests?: Readonly<Record<string, number>>;
+  requests?: Readonly<Record<string, number | unknown[] | undefined>>;
   /** Closes every socket. */
   destroy(): void;
   /** Enables TCP keep-alive. */
-  keepSocketAlive?: boolean;
+  keepSocketAlive?: unknown;
 }
 
 /**
@@ -115,7 +115,7 @@ export function getHttpAgentStats(agent: PooledAgent): PoolStats {
     freeSockets += Array.isArray(sockets) ? sockets.length : 0;
   }
 
-  const requestsQueued = Object.values(agent.requests ?? {}).reduce(
+  const requestsQueued = Object.values(agent.requests ?? {}).reduce<number>(
     (sum, queued) => sum + (typeof queued === 'number' ? queued : 0),
     0,
   );
