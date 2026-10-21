@@ -30,7 +30,12 @@
 import { Agent as HttpAgent } from 'node:http';
 import { Agent as HttpsAgent } from 'node:https';
 import type { AxiosInstance } from 'axios';
-import { DEFAULT_POOL_CONFIG, registerPoolAgent, destroyPoolAgent, type PoolConfig } from '../utils/connection-pool';
+import {
+  DEFAULT_POOL_CONFIG,
+  registerPoolAgent,
+  destroyPoolAgent,
+  type PoolConfig,
+} from '../utils/connection-pool';
 
 export type {
   PoolConfig,
@@ -95,6 +100,12 @@ export function createHttpsAgent(config?: PoolConfig): HttpsAgent {
   return agent;
 }
 
+// Tracks the pair installed by this helper without retaining axios instances.
+const configuredAgents = new WeakMap<
+  AxiosInstance,
+  { httpAgent: HttpAgent; httpsAgent: HttpsAgent }
+>();
+
 /**
  * Applies keep-alive connection-pooling to an axios instance, for a
  * long-running Node process that would otherwise exhaust sockets.
@@ -102,11 +113,6 @@ export function createHttpsAgent(config?: PoolConfig): HttpsAgent {
  * @param instance - The axios instance to configure
  * @param config - Overrides for {@link DEFAULT_POOL_CONFIG}
  */
-// Tracks the pair installed by this helper without retaining axios instances.
-const configuredAgents = new WeakMap<
-  AxiosInstance,
-  { httpAgent: HttpAgent; httpsAgent: HttpsAgent }
->();
 
 export function configureAxiosConnectionPool(instance: AxiosInstance, config?: PoolConfig): void {
   const previous = configuredAgents.get(instance);
