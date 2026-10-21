@@ -253,11 +253,19 @@ export class AccountManager {
   remove(ref: string): boolean {
     const account = this.get(ref);
     if (!account) return false;
+    const wasActive = this.currentActiveId === account.id;
     this.unindex(account.id);
     this.emit({ type: 'removed', account });
-    if (this.currentActiveId === account.id) {
+    if (wasActive) {
       const nextActive = this.byId.keys().next();
-      this.currentActiveId = nextActive.done ? null : nextActive.value;
+      if (!nextActive.done) {
+        this.currentActiveId = nextActive.value;
+        const nextAccount = this.byId.get(nextActive.value)!;
+        this.emit({ type: 'activated', account: nextAccount, previousId: account.id });
+      } else {
+        this.currentActiveId = null;
+        this.emit({ type: 'deactivated', account: null, previousId: account.id });
+      }
     }
     return true;
   }
@@ -381,7 +389,7 @@ export class AccountManager {
   }
 
   /**
-   * Subscribes to registration, update, removal and activation events.
+   * Subscribes to registration, update, removal, activation and deactivation events.
    *
    * @param listener - Called synchronously after each change
    * @returns An unsubscribe function

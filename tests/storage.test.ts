@@ -1,4 +1,6 @@
 import { IPFSStorage } from '../src/storage/ipfs';
+import type { EncryptedData } from '../src';
+import type { EncryptedData as StorageEncryptedData } from '../src/storage';
 import { createApiHttpClient } from '../src/utils/http';
 
 const mockHttpPost = jest.fn();
@@ -163,5 +165,17 @@ describe('IPFSStorage.upload', () => {
     if (!result.ok) {
       expect(result.error).toMatch(/Network error/);
     }
+  });
+
+  it('exports EncryptedData through the public entrypoints (#554)', () => {
+    const payload: EncryptedData = {
+      iv: 'aXY=',
+      data: 'ZGF0YQ==',
+      tag: 'dGFn',
+    };
+    const storagePayload: StorageEncryptedData = payload;
+    expect(storagePayload.iv).toBe('aXY=');
+    expect(storagePayload.data).toBe('ZGF0YQ==');
+    expect(storagePayload.tag).toBe('dGFn');
   });
 });
