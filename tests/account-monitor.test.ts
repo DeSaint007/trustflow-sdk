@@ -16,6 +16,28 @@ describe('AccountBalanceMonitor', () => {
     );
   });
 
+  it('validates minBalanceXLM threshold and throws on invalid or non-finite values (#556)', () => {
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: 'not-a-number' })).toThrow(
+      /Invalid minBalanceXLM threshold/i,
+    );
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: NaN })).toThrow(
+      /Invalid minBalanceXLM threshold/i,
+    );
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: Infinity })).toThrow(
+      /Invalid minBalanceXLM threshold/i,
+    );
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: -Infinity })).toThrow(
+      /Invalid minBalanceXLM threshold/i,
+    );
+  });
+
+  it('accepts valid numeric and numeric-string minBalanceXLM thresholds (#556)', () => {
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: 10 })).not.toThrow();
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: '10' })).not.toThrow();
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: '0.5' })).not.toThrow();
+    expect(() => new AccountBalanceMonitor({ address: 'GBM123', minBalanceXLM: 0 })).not.toThrow();
+  });
+
   it('polls balance and triggers balance_update event', async () => {
     const mockFetch = jest.fn().mockResolvedValue({
       address: 'GBM123',

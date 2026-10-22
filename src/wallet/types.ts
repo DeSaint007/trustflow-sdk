@@ -49,7 +49,7 @@ export function isWalletRejection(error: unknown): boolean {
     lower.includes('user cancelled') ||
     lower.includes('declined by user') ||
     lower.includes('rejected by user') ||
-    lower.includes('denied') ||
-    lower.includes('user denied')
+    lower.includes('user denied') ||
+    lower.includes('denied by user')
   );
 }

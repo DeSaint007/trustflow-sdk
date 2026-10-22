@@ -108,6 +108,58 @@ describe('AccountManager', () => {
     expect(accounts.size).toBe(0);
   });
 
+  it('emits activated event for fallback account when removing active account (#555)', () => {
+    const accounts = new AccountManager();
+    accounts.add({ address: ALICE });
+    accounts.add({ address: BOB });
+    accounts.activate(BOB);
+
+    const events: AccountChangeEvent[] = [];
+    accounts.onChange((e) => events.push(e));
+
+    const removed = accounts.remove(BOB);
+    expect(removed).toBe(true);
+    expect(accounts.active?.address).toBe(ALICE);
+    expect(events).toEqual([
+      { type: 'removed', account: expect.objectContaining({ address: BOB }) },
+      { type: 'activated', account: expect.objectContaining({ address: ALICE }), previousId: BOB },
+    ]);
+  });
+
+  it('emits deactivated event when removing active account and no accounts remain (#555)', () => {
+    const accounts = new AccountManager();
+    accounts.add({ address: ALICE });
+    expect(accounts.active?.address).toBe(ALICE);
+
+    const events: AccountChangeEvent[] = [];
+    accounts.onChange((e) => events.push(e));
+
+    const removed = accounts.remove(ALICE);
+    expect(removed).toBe(true);
+    expect(accounts.active).toBeNull();
+    expect(events).toEqual([
+      { type: 'removed', account: expect.objectContaining({ address: ALICE }) },
+      { type: 'deactivated', account: null, previousId: ALICE },
+    ]);
+  });
+
+  it('only emits removed event when removing a non-active account (#555)', () => {
+    const accounts = new AccountManager();
+    accounts.add({ address: ALICE });
+    accounts.add({ address: BOB });
+    expect(accounts.active?.address).toBe(ALICE);
+
+    const events: AccountChangeEvent[] = [];
+    accounts.onChange((e) => events.push(e));
+
+    const removed = accounts.remove(BOB);
+    expect(removed).toBe(true);
+    expect(accounts.active?.address).toBe(ALICE);
+    expect(events).toEqual([
+      { type: 'removed', account: expect.objectContaining({ address: BOB }) },
+    ]);
+  });
+
   it('deactivates without unregistering', () => {
     const accounts = new AccountManager();
     accounts.add({ address: ALICE });

@@ -1,6 +1,7 @@
 import { connectWallet, disconnectWallet } from '../src/wallet/connect';
 import { getFreighter, isFreighterInstalled } from '../src/wallet/freighter';
 import { getAlbedo } from '../src/wallet/albedo';
+import { isWalletRejection } from '../src/wallet/types';
 import { TrustFlowError } from '../src/errors';
 
 describe('wallet module', () => {
@@ -152,6 +153,65 @@ describe('wallet module', () => {
   describe('disconnectWallet', () => {
     it('is a no-op that resolves successfully', async () => {
       await expect(disconnectWallet()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('isWalletRejection (#557)', () => {
+    it('identifies genuine user rejection messages', () => {
+      expect(isWalletRejection(new Error('User denied transaction signature.'))).toBe(true);
+      expect(isWalletRejection(new Error('User rejected the request.'))).toBe(true);
+      expect(isWalletRejection(new Error('User declined the request.'))).toBe(true);
+      expect(isWalletRejection('user canceled')).toBe(true);
+      expect(isWalletRejection('user cancelled')).toBe(true);
+      expect(isWalletRejection('Transaction was declined by user')).toBe(true);
+      expect(isWalletRejection('Signature was rejected by user')).toBe(true);
+      expect(isWalletRejection('Request was denied by user')).toBe(true);
+      expect(isWalletRejection({ code: 'USER_REJECTED' })).toBe(true);
+      expect(isWalletRejection({ code: -32000 })).toBe(true);
+      expect(isWalletRejection({ code: 4001 })).toBe(true);
+    });
+
+    it('returns false for unrelated denied errors', () => {
+      expect(isWalletRejection('Permission denied')).toBe(false);
+      expect(isWalletRejection('Permission denied: cannot read file')).toBe(false);
+      expect(isWalletRejection(new Error('Permission denied'))).toBe(false);
+      expect(isWalletRejection(new Error('Permission denied: cannot read file'))).toBe(false);
+      expect(isWalletRejection('Access denied')).toBe(false);
+      expect(isWalletRejection(new Error('Access denied'))).toBe(false);
+      expect(isWalletRejection({ message: 'Permission denied: cannot read file' })).toBe(false);
+    });
+
+    it('returns false for null, undefined, and non-rejection errors', () => {
+      expect(isWalletRejection(null)).toBe(false);
+      expect(isWalletRejection(undefined)).toBe(false);
+      expect(isWalletRejection(new Error('Network timeout'))).toBe(false);
+      expect(isWalletRejection('Internal error')).toBe(false);
+    });
+  });
+
+  describe('connectWallet rejection handling (#557)', () => {
+    it('classifies genuine user rejection as USER_REJECTED', async () => {
+      const mockFreighter = {
+        getPublicKey: jest.fn().mockRejectedValue(new Error('User denied transaction signature.')),
+        getNetwork: jest.fn().mockResolvedValue('TESTNET'),
+      };
+      global.window = { freighter: mockFreighter } as any;
+
+      await expect(connectWallet('freighter')).rejects.toMatchObject({
+        code: 'USER_REJECTED',
+      });
+    });
+
+    it('does not classify permission denied errors as USER_REJECTED', async () => {
+      const mockFreighter = {
+        getPublicKey: jest.fn().mockRejectedValue(new Error('Permission denied: cannot read file')),
+        getNetwork: jest.fn().mockResolvedValue('TESTNET'),
+      };
+      global.window = { freighter: mockFreighter } as any;
+
+      await expect(connectWallet('freighter')).rejects.toMatchObject({
+        code: 'UNAUTHORIZED',
+      });
     });
   });
 });

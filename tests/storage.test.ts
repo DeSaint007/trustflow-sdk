@@ -1,4 +1,7 @@
+import axios from 'axios';
 import { IPFSStorage } from '../src/storage/ipfs';
+import type { EncryptedData } from '../src';
+import type { EncryptedData as StorageEncryptedData } from '../src/storage';
 import { createApiHttpClient } from '../src/utils/http';
 
 const mockHttpPost = jest.fn();
@@ -63,6 +66,34 @@ describe('IPFSStorage.upload', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.url).toBe('https://custom-gateway.example.com/ipfs/bafy456');
+    }
+  });
+
+  it('uses the same normalized URL for upload and resolve with a custom gateway', async () => {
+    const cid = 'QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG';
+    mockHttpPost.mockResolvedValueOnce({ data: { cid } });
+    const getSpy = jest.spyOn(axios, 'get').mockResolvedValueOnce({
+      headers: { 'content-type': 'application/json' },
+      data: '{"hello":"world"}',
+    });
+
+    try {
+      const storage = new IPFSStorage({
+        gatewayUrl: 'https://my-gateway.example///',
+        fallbackGateways: [],
+      });
+      const uploaded = await storage.upload(Buffer.from('data'));
+      expect(uploaded.ok).toBe(true);
+      if (!uploaded.ok) throw new Error('Expected upload to succeed');
+
+      expect(uploaded.data.url).toBe(`https://my-gateway.example/ipfs/${cid}`);
+      await expect(storage.resolve(cid)).resolves.toEqual({ hello: 'world' });
+      expect(getSpy).toHaveBeenCalledWith(
+        uploaded.data.url,
+        expect.objectContaining({ timeout: expect.any(Number) }),
+      );
+    } finally {
+      getSpy.mockRestore();
     }
   });
 
@@ -163,5 +194,17 @@ describe('IPFSStorage.upload', () => {
     if (!result.ok) {
       expect(result.error).toMatch(/Network error/);
     }
+  });
+
+  it('exports EncryptedData through the public entrypoints (#554)', () => {
+    const payload: EncryptedData = {
+      iv: 'aXY=',
+      data: 'ZGF0YQ==',
+      tag: 'dGFn',
+    };
+    const storagePayload: StorageEncryptedData = payload;
+    expect(storagePayload.iv).toBe('aXY=');
+    expect(storagePayload.data).toBe('ZGF0YQ==');
+    expect(storagePayload.tag).toBe('dGFn');
   });
 });

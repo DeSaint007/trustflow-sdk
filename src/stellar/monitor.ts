@@ -85,6 +85,11 @@ export class AccountBalanceMonitor {
       typeof config.minBalanceXLM === 'number'
         ? config.minBalanceXLM
         : parseFloat(config.minBalanceXLM ?? '10');
+    if (!Number.isFinite(this.minBalanceXLM)) {
+      throw new Error(
+        `Invalid minBalanceXLM threshold: ${String(config.minBalanceXLM)}. Expected a finite number or numeric string.`,
+      );
+    }
     this.pollIntervalMs = config.pollIntervalMs ?? 30_000;
     this.webhookUrl = config.webhookUrl;
     this.webhookHeaders = config.webhookHeaders;

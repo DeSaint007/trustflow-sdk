@@ -109,7 +109,16 @@ export type AccountChangeEvent =
   | { type: 'added'; account: AccountContext }
   | { type: 'updated'; account: AccountContext; previous: AccountContext }
   | { type: 'removed'; account: AccountContext }
-  | { type: 'activated'; account: AccountContext; previousId: string | null };
+  | { type: 'activated'; account: AccountContext; previousId: string | null }
+  | {
+      /**
+       * Emitted when there is no active account remaining (e.g. after removing the
+       * active account when no other registered accounts remain).
+       */
+      type: 'deactivated';
+      account: null;
+      previousId: string | null;
+    };
 
 /** Listener registered with {@link import('./manager').AccountManager.onChange}. */
 export type AccountChangeListener = (event: AccountChangeEvent) => void;
